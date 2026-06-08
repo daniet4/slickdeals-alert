@@ -2,6 +2,7 @@
 import json
 import os
 import re
+import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 
@@ -94,9 +95,13 @@ def notify_discord(items):
             },
             method="POST",
         )
-        with urllib.request.urlopen(req, timeout=10):
-            pass
-        print(f"Sent: {item['title']}")
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"Sent: {item['title']} (status {resp.status})")
+        except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")
+            print(f"Discord returned {e.code}: {body}")
+            raise
 
 
 def main():
