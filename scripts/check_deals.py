@@ -17,6 +17,7 @@ RSS_URL = (
 THUMB_THRESHOLD = 5
 STATE_FILE = "../seen_guids.json"
 DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL")
+DISCORD_ROLE_ID = os.environ.get("DISCORD_ROLE_ID", "")
 
 NS = {
     "dc": "http://purl.org/dc/elements/1.1/",
@@ -102,7 +103,11 @@ def notify_discord(items):
                 {"name": "Date (PST)", "value": item["pubdate_pst"], "inline": False},
             ],
         }
-        payload = json.dumps({"embeds": [embed]}).encode("utf-8")
+        payload_data = {"embeds": [embed]}
+        if DISCORD_ROLE_ID:
+            payload_data["content"] = f"<@&{DISCORD_ROLE_ID}>"
+            payload_data["allowed_mentions"] = {"roles": [DISCORD_ROLE_ID]}
+        payload = json.dumps(payload_data).encode("utf-8")
         req = urllib.request.Request(
             DISCORD_WEBHOOK,
             data=payload,
