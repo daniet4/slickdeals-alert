@@ -8,13 +8,7 @@ import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
 from zoneinfo import ZoneInfo
 
-RSS_URL = (
-    "https://slickdeals.net/newsearch.php"
-    "?q=@title%20%22iPhone%2015%22%20|%20%22iPhone%2016%22%20|%20%22iPhone%2017%22%20"
-    "-(case%20|%20controller%20|%20charg*%20|%20protector*%20|%20reader%20|%20adapter%20|%20wallet)"
-    "&rss=1"
-)
-THUMB_THRESHOLD = 5
+CONFIG_FILE = "../config/feeds.json"
 STATE_FILE = "../seen_guids.json"
 DISCORD_WEBHOOK = os.environ.get("DISCORD_WEBHOOK_URL")
 DISCORD_ROLE_ID = os.environ.get("DISCORD_ROLE_ID", "")
@@ -25,13 +19,19 @@ NS = {
 }
 
 
-def fetch_rss():
-    req = urllib.request.Request(RSS_URL, headers={"User-Agent": "Mozilla/5.0"})
+def load_config():
+    path = os.path.join(os.path.dirname(__file__), CONFIG_FILE)
+    with open(path) as f:
+        return json.load(f)
+
+
+def fetch_rss(url):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
     with urllib.request.urlopen(req, timeout=30) as resp:
         return resp.read()
 
 
-def parse_rss(xml_data):
+def parse_rss(xml_data, feed_name):
     root = ET.fromstring(xml_data)
     items = []
     for item in root.iter("item"):
@@ -50,7 +50,6 @@ def parse_rss(xml_data):
 
         pubdate_el = item.find("pubDate")
         pubdate_str = pubdate_el.text if pubdate_el is not None and pubdate_el.text else ""
-        pubdate_utc = None
         pubdate_pst = ""
         if pubdate_str:
             try:
@@ -63,11 +62,13 @@ def parse_rss(xml_data):
 
         items.append({
             "guid": guid,
+            "feed_guid": f"{feed_name}:{guid}",
             "title": title,
             "link": link,
             "creator": creator,
             "thumb_score": thumb_score,
             "pubdate_pst": pubdate_pst,
+            "feed_name": feed_name,
         })
     return items
 
@@ -86,7 +87,36 @@ def save_seen(guids):
         json.dump(sorted(guids), f)
 
 
-def notify_discord(items):
+def process_feed(feed, seen):
+    print(f"\n--- {feed['name']} ---")
+    print("Fetching RSS feed...")
+    xml_data = fetch_rss(feed["url"])
+
+    print("Parsing items...")
+    items = parse_rss(xml_data, feed["name"])
+    print(f"Found {len(items)} items total")
+
+    threshold = feed.get("thumb_threshold", 5)
+    qualifying = [i for i in items if i["thumb_score"] >= threshold]
+    new_items = [i for i in qualifying if i["feed_guid"] not in seen]
+
+    if new_items:
+        print(f"New qualifying items: {len(new_items)}")
+        for item in new_items:
+            print(f"  {item['title']} (score: +{item['thumb_score']})")
+    else:
+        print("No new qualifying items")
+
+    all_qualifying_guids = {i["feed_guid"] for i in qualifying}
+    seen.update(all_qualifying_guids)
+    return new_items
+
+
+def send_notifications(items):
+    if not items:
+        print("Nothing to notify")
+        return
+
     if not DISCORD_WEBHOOK:
         print("DISCORD_WEBHOOK_URL not set, skipping notification")
         return
@@ -98,6 +128,7 @@ def notify_discord(items):
             "url": item["link"],
             "color": color,
             "fields": [
+                {"name": "Feed", "value": item["feed_name"], "inline": True},
                 {"name": "Thumb Score", "value": f"+{item['thumb_score']}", "inline": True},
                 {"name": "Posted by", "value": item["creator"], "inline": True},
                 {"name": "Date (PST)", "value": item["pubdate_pst"], "inline": False},
@@ -127,29 +158,20 @@ def notify_discord(items):
 
 
 def main():
-    print("Fetching RSS feed...")
-    xml_data = fetch_rss()
-
-    print("Parsing items...")
-    items = parse_rss(xml_data)
-    print(f"Found {len(items)} items total")
+    feeds = load_config()
+    print(f"Loaded {len(feeds)} feed(s) from config")
 
     seen = load_seen()
     print(f"Loaded {len(seen)} previously seen GUIDs")
 
-    qualifying = [i for i in items if i["thumb_score"] >= THUMB_THRESHOLD]
-    new_items = [i for i in qualifying if i["guid"] not in seen]
+    all_new = []
+    for feed in feeds:
+        new = process_feed(feed, seen)
+        all_new.extend(new)
 
-    if new_items:
-        print(f"New qualifying items: {len(new_items)}")
-        for item in new_items:
-            print(f"  {item['title']} (score: +{item['thumb_score']})")
-        notify_discord(new_items)
-    else:
-        print("No new qualifying items")
+    print(f"\nTotal new items across all feeds: {len(all_new)}")
+    send_notifications(all_new)
 
-    all_qualifying_guids = {i["guid"] for i in qualifying}
-    seen.update(all_qualifying_guids)
     save_seen(seen)
     print(f"Saved {len(seen)} seen GUIDs")
 
