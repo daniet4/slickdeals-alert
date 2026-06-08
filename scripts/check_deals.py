@@ -5,6 +5,8 @@ import re
 import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
+from email.utils import parsedate_to_datetime
+from zoneinfo import ZoneInfo
 
 RSS_URL = (
     "https://slickdeals.net/newsearch.php"
@@ -45,12 +47,26 @@ def parse_rss(xml_data):
         if match:
             thumb_score = int(match.group(1))
 
+        pubdate_el = item.find("pubDate")
+        pubdate_str = pubdate_el.text if pubdate_el is not None and pubdate_el.text else ""
+        pubdate_utc = None
+        pubdate_pst = ""
+        if pubdate_str:
+            try:
+                pubdate_utc = parsedate_to_datetime(pubdate_str)
+                pubdate_pst = pubdate_utc.astimezone(
+                    ZoneInfo("America/Los_Angeles")
+                ).strftime("%b %d, %Y %I:%M %p %Z")
+            except (ValueError, TypeError):
+                pass
+
         items.append({
             "guid": guid,
             "title": title,
             "link": link,
             "creator": creator,
             "thumb_score": thumb_score,
+            "pubdate_pst": pubdate_pst,
         })
     return items
 
@@ -83,6 +99,7 @@ def notify_discord(items):
             "fields": [
                 {"name": "Thumb Score", "value": f"+{item['thumb_score']}", "inline": True},
                 {"name": "Posted by", "value": item["creator"], "inline": True},
+                {"name": "Date (PST)", "value": item["pubdate_pst"], "inline": False},
             ],
         }
         payload = json.dumps({"embeds": [embed]}).encode("utf-8")
