@@ -6,6 +6,7 @@ import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
+from urllib.parse import quote
 from zoneinfo import ZoneInfo
 
 CONFIG_FILE = "../config/feeds.json"
@@ -23,6 +24,18 @@ def load_config():
     path = os.path.join(os.path.dirname(__file__), CONFIG_FILE)
     with open(path) as f:
         return json.load(f)
+
+
+def get_feed_url(feed):
+    if "url" in feed:
+        url = feed["url"]
+        if "rss=1" not in url:
+            sep = "&" if "?" in url else "?"
+            url = f"{url}{sep}rss=1"
+        return url
+    filter_str = feed["filter"]
+    encoded = quote(filter_str, safe="@|*()-")
+    return f"https://slickdeals.net/newsearch.php?q={encoded}&rss=1"
 
 
 def fetch_rss(url):
@@ -89,8 +102,9 @@ def save_seen(guids):
 
 def process_feed(feed, seen):
     print(f"\n--- {feed['name']} ---")
-    print("Fetching RSS feed...")
-    xml_data = fetch_rss(feed["url"])
+    url = get_feed_url(feed)
+    print(f"Fetching RSS feed...")
+    xml_data = fetch_rss(url)
 
     print("Parsing items...")
     items = parse_rss(xml_data, feed["name"])
