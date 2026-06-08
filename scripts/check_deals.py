@@ -61,6 +61,11 @@ def parse_rss(xml_data, feed_name):
         if match:
             thumb_score = int(match.group(1))
 
+        img_url = ""
+        img_match = re.search(r'<img[^>]+src="([^"]+)"', content)
+        if img_match:
+            img_url = img_match.group(1)
+
         pubdate_el = item.find("pubDate")
         pubdate_str = pubdate_el.text if pubdate_el is not None and pubdate_el.text else ""
         pubdate_pst = ""
@@ -82,6 +87,7 @@ def parse_rss(xml_data, feed_name):
             "thumb_score": thumb_score,
             "pubdate_pst": pubdate_pst,
             "feed_name": feed_name,
+            "img_url": img_url,
         })
     return items
 
@@ -141,7 +147,10 @@ def send_notifications(items):
             "title": item["title"][:256],
             "url": item["link"],
             "color": color,
-            "fields": [
+        }
+        if item["img_url"]:
+            embed["thumbnail"] = {"url": item["img_url"]}
+        embed["fields"] = [
                 {"name": "Feed", "value": item["feed_name"], "inline": True},
                 {"name": "Thumb Score", "value": f"+{item['thumb_score']}", "inline": True},
                 {"name": "Posted by", "value": item["creator"], "inline": True},
