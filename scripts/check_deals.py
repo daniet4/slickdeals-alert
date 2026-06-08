@@ -155,8 +155,7 @@ def send_notifications(items):
                 {"name": "Thumb Score", "value": f"+{item['thumb_score']}", "inline": True},
                 {"name": "Posted by", "value": item["creator"], "inline": True},
                 {"name": "Date (PST)", "value": item["pubdate_pst"], "inline": False},
-            ],
-        }
+            ]
         payload_data = {"embeds": [embed]}
         if DISCORD_ROLE_ID:
             payload_data["content"] = f"<@&{DISCORD_ROLE_ID}>"
