@@ -88,7 +88,10 @@ def notify_discord(items):
         req = urllib.request.Request(
             DISCORD_WEBHOOK,
             data=payload,
-            headers={"Content-Type": "application/json"},
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "slickdeals-alert/1.0",
+            },
             method="POST",
         )
         with urllib.request.urlopen(req, timeout=10):
