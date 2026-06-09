@@ -53,7 +53,7 @@ Go to your repo → **Settings → Secrets and variables → Actions → New rep
 | `DISCORD_ROLE_ID` | (Optional) A Discord role ID to ping — see below |
 
 **Getting a Discord Role ID:**
-- Create a role in Server Settings → Roles (e.g. @iPhone Deals)
+- Create a role in Server Settings → Roles (e.g. @deals)
 - Enable **Developer Mode** in Discord (User Settings → Advanced → Developer Mode)
 - Right-click the role name in the roles list → **Copy ID**
 - Add it as the `DISCORD_ROLE_ID` secret
