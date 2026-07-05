@@ -21,9 +21,26 @@ jobs:
           restore-keys: |
             slickdeals-guids-
 
+      - name: Show restored cache
+        run: |
+          if [ -f seen_guids.json ]; then
+            echo "Cache file size: $(wc -c < seen_guids.json) bytes"
+            echo "Total entries: $(python3 -c 'import json; print(len(json.load(open(\"seen_guids.json\"))))')"
+          else
+            echo "No cache file found"
+          fi
+
       - name: Check for deals
         working-directory: scripts
         run: python check_deals.py
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
+
+      - name: Show updated cache
+        run: |
+          if [ -f seen_guids.json ]; then
+            echo "Updated cache: $(python3 -c 'import json; print(len(json.load(open(\"seen_guids.json\"))))') entries"
+          else
+            echo "No cache file saved"
+          fi
