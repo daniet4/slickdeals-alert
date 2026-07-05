@@ -22,13 +22,7 @@ jobs:
             slickdeals-guids-
 
       - name: Show restored cache
-        run: |
-          if [ -f seen_guids.json ]; then
-            echo "Cache file size: $(wc -c < seen_guids.json) bytes"
-            echo "Total entries: $(python3 -c 'import json; print(len(json.load(open(\"seen_guids.json\"))))')"
-          else
-            echo "No cache file found"
-          fi
+        run: python3 -c "import json, os; data=json.load(open('seen_guids.json')); print('Cache entries:', len(data))" 2>/dev/null || echo "No cache file found"
 
       - name: Check for deals
         working-directory: scripts
@@ -38,9 +32,4 @@ jobs:
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
 
       - name: Show updated cache
-        run: |
-          if [ -f seen_guids.json ]; then
-            echo "Updated cache: $(python3 -c 'import json; print(len(json.load(open(\"seen_guids.json\"))))') entries"
-          else
-            echo "No cache file saved"
-          fi
+        run: python3 -c "import json; data=json.load(open('seen_guids.json')); print('Updated cache entries:', len(data))"
