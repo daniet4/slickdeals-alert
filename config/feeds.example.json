@@ -1,0 +1,7 @@
+[
+  {
+    "name": "Example Feed",
+    "url": "https://slickdeals.net/newsearch.php?q=@title+%22keyword%22&rss=1",
+    "thumb_threshold": 5
+  }
+]
