@@ -1,4 +1,4 @@
-name: Check Fire Deals
+name: Check Fire Deals (HTML)
 
 on:
   workflow_dispatch:

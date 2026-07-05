@@ -1,4 +1,4 @@
-name: Check Slickdeals Deals
+name: Check Slickdeals Deals (RSS)
 
 on:
   workflow_dispatch:
