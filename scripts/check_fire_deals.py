@@ -48,18 +48,50 @@ def get_page_url(base_url, page_num):
     return f"{base_url}{sep}page={page_num}"
 
 
+def parse_deals_from_page(data):
+    page_data = resolve_nuxt_data(data, data[4]["pageData"])
+    deals_raw = page_data.get("deals", [])
+    pagination = page_data.get("pagination", {})
+
+    deals = []
+    for deal in deals_raw:
+        deal["dealThreadUrl"] = "https://slickdeals.net" + deal.get("dealThreadUrl", "")
+        deals.append(deal)
+
+    return deals, pagination
+
+
 def main():
     print("=== Slickdeals Fire Deals 100+ ===")
+
+    all_deals = []
     html = fetch_page(SEARCH_URL)
     data = extract_nuxt_data(html)
     if not data:
         return
 
-    page_data = resolve_nuxt_data(data, data[4]["pageData"])
-    pagination = page_data.get("pagination", {})
+    deals, pagination = parse_deals_from_page(data)
+    print(f"  Page {pagination.get('currentPage', 1)}: {len(deals)} deals")
+    all_deals.extend(deals)
+
     total_pages = pagination.get("totalPages", 1)
-    print(f"Total results: {page_data['resultCount']}")
-    print(f"Total pages: {total_pages}")
+    for page in range(2, total_pages + 1):
+        url = get_page_url(SEARCH_URL, page)
+        html = fetch_page(url)
+        data = extract_nuxt_data(html)
+        if not data:
+            continue
+        deals, pagination = parse_deals_from_page(data)
+        print(f"  Page {pagination.get('currentPage', 1)}: {len(deals)} deals")
+        all_deals.extend(deals)
+
+    print(f"\nTotal deals fetched: {len(all_deals)}")
+
+    qualifying = [d for d in all_deals if d.get("socialVoteCount", 0) >= THUMB_THRESHOLD]
+    print(f"Qualifying (score >= {THUMB_THRESHOLD}): {len(qualifying)}")
+
+    for d in sorted(qualifying, key=lambda x: x["socialVoteCount"], reverse=True):
+        print(f"  +{d['socialVoteCount']:>4} | {d.get('dealTitle', '')[:70]}")
 
 
 if __name__ == "__main__":
