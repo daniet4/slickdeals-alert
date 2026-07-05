@@ -188,6 +188,9 @@ def main():
 
     all_new = []
     for feed in feeds:
+        if "url" not in feed and "filter" not in feed:
+            print(f"  Skipping '{feed.get('name', 'unnamed')}' — no url or filter")
+            continue
         new = process_feed(feed, seen)
         all_new.extend(new)
 
