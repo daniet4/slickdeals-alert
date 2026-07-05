@@ -2,7 +2,10 @@
 import json
 import os
 import re
+import urllib.error
 import urllib.request
+from datetime import datetime
+from zoneinfo import ZoneInfo
 
 SEARCH_URL = "https://slickdeals.net/search?q=&searchtype=normal&sort=recent&filters%5Brating%5D%5B%5D=firedeal&filters%5Bdate%5D%5B%5D=7"
 THUMB_THRESHOLD = 100
@@ -75,6 +78,69 @@ def save_seen(guids):
     with open(path, "w") as f:
         json.dump(sorted(guids), f)
     print(f"  Saved {len(guids)} seen GUIDs")
+
+
+def send_notifications(items):
+    if not items:
+        print("Nothing to notify")
+        return
+
+    if not DISCORD_WEBHOOK:
+        print("DISCORD_WEBHOOK_URL not set, skipping notification")
+        return
+
+    for item in items:
+        score = item.get("socialVoteCount", 0)
+        color = 0x00FF00 if score >= 10 else 0xFFA500
+        embed = {
+            "title": item.get("dealTitle", "")[:256],
+            "url": item.get("dealThreadUrl", ""),
+            "color": color,
+        }
+        img_url = item.get("dealImageUrl", "")
+        if img_url:
+            embed["thumbnail"] = {"url": img_url}
+
+        pubdate_str = item.get("threadIsoDatetime", "")
+        pubdate_pst = ""
+        if pubdate_str:
+            try:
+                pubdate_dt = datetime.fromisoformat(pubdate_str)
+                pubdate_pst = pubdate_dt.astimezone(
+                    ZoneInfo("America/Los_Angeles")
+                ).strftime("%b %d, %Y %I:%M %p %Z")
+            except (ValueError, TypeError):
+                pass
+
+        embed["fields"] = [
+            {"name": "Feed", "value": "Fire Deals 100+", "inline": True},
+            {"name": "Thumb Score", "value": f"+{score}", "inline": True},
+            {"name": "Store", "value": item.get("storeName", ""), "inline": True},
+            {"name": "Date (PST)", "value": pubdate_pst, "inline": False},
+        ]
+
+        payload_data = {"embeds": [embed]}
+        if DISCORD_ROLE_ID:
+            payload_data["content"] = f"<@&{DISCORD_ROLE_ID}>"
+            payload_data["allowed_mentions"] = {"roles": [DISCORD_ROLE_ID]}
+
+        payload = json.dumps(payload_data).encode("utf-8")
+        req = urllib.request.Request(
+            DISCORD_WEBHOOK,
+            data=payload,
+            headers={
+                "Content-Type": "application/json",
+                "User-Agent": "fire-deals-alert/1.0",
+            },
+            method="POST",
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=10) as resp:
+                print(f"  Sent: {item.get('dealTitle', '')[:60]} (status {resp.status})")
+        except urllib.error.HTTPError as e:
+            body = e.read().decode(errors="replace")
+            print(f"  Discord returned {e.code}: {body}")
+            raise
 
 
 def main():
