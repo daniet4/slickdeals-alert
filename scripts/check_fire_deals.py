@@ -4,8 +4,6 @@ import os
 import re
 import urllib.error
 import urllib.request
-from email.utils import parsedate_to_datetime
-from zoneinfo import ZoneInfo
 
 SEARCH_URL = "https://slickdeals.net/search?q=&searchtype=normal&sort=recent&filters%5Brating%5D%5B%5D=firedeal&filters%5Bdate%5D%5B%5D=7"
 THUMB_THRESHOLD = 100
