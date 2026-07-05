@@ -6,7 +6,7 @@ import urllib.error
 import urllib.request
 import xml.etree.ElementTree as ET
 from email.utils import parsedate_to_datetime
-from urllib.parse import quote
+from urllib.parse import quote, urlparse, parse_qs
 from zoneinfo import ZoneInfo
 
 CONFIG_FILE = "../config/feeds.json"
@@ -29,6 +29,11 @@ def load_config():
 def get_feed_url(feed):
     if "url" in feed:
         url = feed["url"]
+        parsed = urlparse(url)
+        if "/search" in parsed.path:
+            params = parse_qs(parsed.query)
+            if "q" in params:
+                return f"https://slickdeals.net/newsearch.php?q={params['q'][0]}&rss=1"
         if "rss=1" not in url:
             sep = "&" if "?" in url else "?"
             url = f"{url}{sep}rss=1"
