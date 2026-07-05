@@ -1,0 +1,26 @@
+name: Check Fire Deals
+
+on:
+  workflow_dispatch:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/cache/restore@v5
+        with:
+          path: fire_deals_seen.json
+          key: fire-deals-guids
+
+      - name: Check for fire deals
+        run: python3 scripts/check_fire_deals.py
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
+
+      - uses: actions/cache/save@v5
+        with:
+          path: fire_deals_seen.json
+          key: fire-deals-guids
