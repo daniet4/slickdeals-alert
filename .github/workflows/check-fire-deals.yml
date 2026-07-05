@@ -12,7 +12,9 @@ jobs:
       - uses: actions/cache/restore@v5
         with:
           path: fire_deals_seen.json
-          key: fire-deals-guids
+          key: fire-deals-guids-${{ github.run_id }}
+          restore-keys: |
+            fire-deals-guids-
 
       - name: Check for fire deals
         run: python3 scripts/check_fire_deals.py
@@ -23,4 +25,4 @@ jobs:
       - uses: actions/cache/save@v5
         with:
           path: fire_deals_seen.json
-          key: fire-deals-guids
+          key: fire-deals-guids-${{ github.run_id }}
