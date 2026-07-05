@@ -9,31 +9,19 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-python@v6
-        with:
-          python-version: "3.x"
-
-      - name: Restore seen GUIDs cache
-        uses: actions/cache/restore@v5
+      - uses: actions/cache/restore@v5
         with:
           path: seen_guids.json
           key: slickdeals-guids
 
-      - name: Show restored cache
-        run: python3 -c "import json, os; data=json.load(open('seen_guids.json')); print('Cache entries:', len(data))" 2>/dev/null || echo "No cache file found"
-
       - name: Check for deals
         working-directory: scripts
-        run: python check_deals.py
+        run: python3 check_deals.py
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
 
-      - name: Show updated cache
-        run: python3 -c "import json; data=json.load(open('seen_guids.json')); print('Updated cache entries:', len(data))"
-
-      - name: Save seen GUIDs cache
-        uses: actions/cache/save@v5
+      - uses: actions/cache/save@v5
         with:
           path: seen_guids.json
           key: slickdeals-guids
