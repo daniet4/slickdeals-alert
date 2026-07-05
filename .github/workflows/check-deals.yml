@@ -14,11 +14,10 @@ jobs:
           python-version: "3.x"
 
       - name: Restore seen GUIDs cache
-        uses: actions/cache@v5
+        uses: actions/cache/restore@v5
         with:
           path: seen_guids.json
           key: slickdeals-guids
-          save-always: true
 
       - name: Show restored cache
         run: python3 -c "import json, os; data=json.load(open('seen_guids.json')); print('Cache entries:', len(data))" 2>/dev/null || echo "No cache file found"
@@ -32,3 +31,9 @@ jobs:
 
       - name: Show updated cache
         run: python3 -c "import json; data=json.load(open('seen_guids.json')); print('Updated cache entries:', len(data))"
+
+      - name: Save seen GUIDs cache
+        uses: actions/cache/save@v5
+        with:
+          path: seen_guids.json
+          key: slickdeals-guids
