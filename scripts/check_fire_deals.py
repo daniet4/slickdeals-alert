@@ -61,6 +61,22 @@ def parse_deals_from_page(data):
     return deals, pagination
 
 
+def load_seen():
+    path = os.path.join(os.path.dirname(__file__), STATE_FILE)
+    if os.path.exists(path):
+        with open(path) as f:
+            return set(json.load(f))
+    print("  No existing seen file — first run (will be quiet)")
+    return set()
+
+
+def save_seen(guids):
+    path = os.path.join(os.path.dirname(__file__), STATE_FILE)
+    with open(path, "w") as f:
+        json.dump(sorted(guids), f)
+    print(f"  Saved {len(guids)} seen GUIDs")
+
+
 def main():
     print("=== Slickdeals Fire Deals 100+ ===")
 
@@ -90,8 +106,28 @@ def main():
     qualifying = [d for d in all_deals if d.get("socialVoteCount", 0) >= THUMB_THRESHOLD]
     print(f"Qualifying (score >= {THUMB_THRESHOLD}): {len(qualifying)}")
 
-    for d in sorted(qualifying, key=lambda x: x["socialVoteCount"], reverse=True):
-        print(f"  +{d['socialVoteCount']:>4} | {d.get('dealTitle', '')[:70]}")
+    seen = load_seen()
+    has_seen_before = bool(seen)
+    print(f"  Loaded {len(seen)} previously seen GUIDs")
+
+    new_items = [d for d in qualifying if str(d.get("threadId", "")) not in seen]
+
+    if has_seen_before:
+        print(f"  New qualifying items: {len(new_items)}")
+    else:
+        print(f"  First run — discovering {len(qualifying)} qualifying items (quiet)")
+
+    for d in sorted(new_items if has_seen_before else [], key=lambda x: x["socialVoteCount"], reverse=True):
+        print(f"    NEW +{d['socialVoteCount']:>4} | {d.get('dealTitle', '')[:70]}")
+
+    # Track all qualifying GUIDs
+    all_qualifying_guids = {str(d.get("threadId", "")) for d in qualifying}
+    seen.update(all_qualifying_guids)
+    print(f"  Seen set now has {len(seen)} GUIDs")
+
+    if has_seen_before and new_items:
+        send_notifications(new_items)
+    save_seen(seen)
 
 
 if __name__ == "__main__":
