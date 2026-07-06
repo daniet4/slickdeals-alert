@@ -1,10 +1,19 @@
 # Slickdeals Deal Alerts
 
-Monitors Slickdeals RSS feeds for deals matching a search filter, filters by thumb score (community popularity), and sends Discord notifications with product images.
+Monitors Slickdeals for deals and sends Discord notifications. Two independent
+trackers:
 
-Runs on GitHub Actions every 15 minutes via cron-job.org — completely free, no local hardware needed, 24/7 uptime.
+- **RSS Alerts** (15 min): Real-time monitoring of search feeds with configurable
+  thumb score thresholds.
+- **Fire Deals 100+** (hourly): Scrapes the HTML search page for fire deals in
+  the last 7 days with thumb score >= 100.
+
+Both run on GitHub Actions via cron-job.org — completely free, no local hardware,
+24/7 uptime.
 
 ## How It Works
+
+### RSS Alerts
 
 1. **cron-job.org** sends a POST to GitHub's API every 15 minutes
 2. **GitHub Actions** runs `scripts/check_deals.py`
@@ -12,6 +21,16 @@ Runs on GitHub Actions every 15 minutes via cron-job.org — completely free, no
 4. Items with thumb score >= the feed's threshold are kept
 5. Already-seen items (tracked via `seen_guids.json`, cached between runs) are skipped
 6. New qualifying deals are sent to Discord as embeds with a role ping
+
+### Fire Deals 100+
+
+1. **cron-job.org** sends a POST to GitHub's API every hour
+2. **GitHub Actions** runs `scripts/check_fire_deals.py`
+3. The script fetches the Slickdeals HTML search page for fire deals (last 7 days)
+4. Parses embedded JSON data to extract deal info and thumb scores
+5. Filters to deals with thumb score >= 100
+6. First run is quiet — seeds the seen set without notifying
+7. Subsequent runs send Discord embeds for new qualifying deals
 
 ## Setup
 
@@ -62,7 +81,10 @@ Go to your repo → **Settings → Secrets and variables → Actions → New rep
 
 1. Go to [cron-job.org](https://cron-job.org) and create a free account
 2. Click **Cronjobs → Create Cronjob**
-3. Configure:
+
+Create two cron jobs:
+
+**RSS Alerts (every 15 min):**
 
 | Field | Value |
 |---|---|
@@ -74,7 +96,19 @@ Go to your repo → **Settings → Secrets and variables → Actions → New rep
 | HTTP Headers | Add header: `Authorization` → `Bearer YOUR_GITHUB_PAT` |
 | Schedule | Every 15 minutes at :00, :15, :30, :45 |
 
-4. Click **Save**
+**Fire Deals 100+ (every hour):**
+
+| Field | Value |
+|---|---|
+| Title | `Fire Deals 100+ Trigger` |
+| URL | `https://api.github.com/repos/YOUR_USER/YOUR_REPO/actions/workflows/check-fire-deals.yml/dispatches` |
+| Request method | `POST` |
+| Content Type | `application/json` |
+| Post Body | `{"ref": "main"}` |
+| HTTP Headers | Same `Authorization` header as above |
+| Schedule | Every hour at :00 |
+
+3. Click **Save** for each
 
 **Getting a GitHub PAT:**
 - Go to https://github.com/settings/tokens → **Generate new token → Fine-grained token**
@@ -118,10 +152,18 @@ Commit and push changes. No other setup needed.
 ## File Structure
 
 ```
-├── .github/workflows/check-deals.yml   — GitHub Actions workflow
-├── config/feeds.json                    — Feed definitions
-├── scripts/check_deals.py              — RSS fetcher, parser, Discord notifier
-├── cronjob-config.md                   — cron-job.org reference
-├── seen_guids.json                     — Cache of seen GUIDs (gitignored)
+├── .github/workflows/
+│   ├── check-deals.yml          — RSS alerts workflow (15 min)
+│   └── check-fire-deals.yml     — Fire deals 100+ workflow (hourly)
+├── config/
+│   └── feeds.json               — RSS feed definitions
+├── scripts/
+│   ├── check_deals.py           — RSS fetcher, parser, Discord notifier
+│   └── check_fire_deals.py      — HTML scraper for fire deals 100+
+├── docs/superpowers/
+│   ├── specs/                   — Design documents
+│   └── plans/                   — Implementation plans
+├── seen_guids.json              — RSS seen GUIDs (gitignored)
+├── fire_deals_seen.json         — Fire deals seen GUIDs (gitignored)
 └── README.md
 ```
