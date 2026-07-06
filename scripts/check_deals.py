@@ -33,7 +33,8 @@ def get_feed_url(feed):
         if "/search" in parsed.path:
             params = parse_qs(parsed.query)
             if "q" in params:
-                return f"https://slickdeals.net/newsearch.php?q={params['q'][0]}&rss=1"
+                encoded = quote(params["q"][0], safe="@|*()-")
+                return f"https://slickdeals.net/newsearch.php?q={encoded}&rss=1"
         if "rss=1" not in url:
             sep = "&" if "?" in url else "?"
             url = f"{url}{sep}rss=1"
