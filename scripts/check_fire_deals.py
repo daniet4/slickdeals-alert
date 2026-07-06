@@ -128,7 +128,6 @@ def send_notifications(items):
             {"name": "Price", "value": price_str, "inline": True},
             {"name": "Discount", "value": discount_str, "inline": True},
             {"name": "Store", "value": item.get("storeName", ""), "inline": True},
-            {"name": "Thumb Score", "value": f"+{score}", "inline": True},
             {"name": "Date (PST)", "value": pubdate_pst, "inline": False},
         ]
 
