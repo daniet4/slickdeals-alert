@@ -112,21 +112,11 @@ def send_notifications(items):
             except (ValueError, TypeError):
                 pass
 
-        list_price = item.get("listPriceText", "")
         final_price = item.get("finalPriceText", "")
-        discount = item.get("discount", 0)
-        if list_price and final_price:
-            price_str = f"~~{list_price}~~ {final_price}"
-        elif final_price:
-            price_str = final_price
-        else:
-            price_str = ""
-        discount_str = f"{discount}% off" if discount else ""
 
         embed["fields"] = [
             {"name": "Feed", "value": "Fire Deals 100+", "inline": True},
-            {"name": "Price", "value": price_str, "inline": True},
-            {"name": "Discount", "value": discount_str, "inline": True},
+            {"name": "Price", "value": final_price, "inline": True},
             {"name": "Store", "value": item.get("storeName", ""), "inline": True},
             {"name": "Date (PST)", "value": pubdate_pst, "inline": False},
         ]
