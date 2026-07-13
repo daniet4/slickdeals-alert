@@ -26,3 +26,17 @@ jobs:
         with:
           path: fire_deals_seen.json
           key: fire-deals-guids-${{ github.run_id }}
+
+      - name: Notify on consecutive failures
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          prev=$(gh run list --workflow "${{ github.workflow }}" --branch "${{ github.ref_name }}" \
+            --status completed --json conclusion --limit 1 --jq '.[0].conclusion')
+          if [ "$prev" = "failure" ]; then
+            curl -s -H "Content-Type: application/json" \
+              -X POST \
+              -d '{"content":"🔴 2 consecutive failures: **${{ github.workflow }}**\n<${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}>"}' \
+              ${{ secrets.DISCORD_WEBHOOK_URL }}
+          fi
