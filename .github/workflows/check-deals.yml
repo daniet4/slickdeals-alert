@@ -10,11 +10,23 @@ jobs:
       - uses: actions/checkout@v7
 
       - uses: actions/cache/restore@v5
+        id: cache-restore
         with:
           path: seen_guids.json
           key: slickdeals-guids-${{ github.run_id }}
           restore-keys: |
             slickdeals-guids-
+
+      - name: Cache debug
+        run: |
+          echo "Cache hit: ${{ steps.cache-restore.outputs.cache-hit }}"
+          echo "Cache key: ${{ steps.cache-restore.outputs.cache-primary-key }}"
+          echo "Matched key: ${{ steps.cache-restore.outputs.cache-matched-key }}"
+          if [ -f seen_guids.json ]; then
+            echo "Found seen_guids.json with $(python3 -c 'import json; print(len(json.load(open(\"seen_guids.json\"))))') GUIDs"
+          else
+            echo "No seen_guids.json — starting fresh"
+          fi
 
       - name: Check for deals
         working-directory: scripts
@@ -22,6 +34,23 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
+
+      - name: List recent caches
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "=== Recent cache keys ==="
+          gh actions cache list --key slickdeals-guids --limit 10 --json id,key,createdAt --jq '.[] | "\(.createdAt[0:19]) \(.key)"' 2>/dev/null || echo "No caches found or gh not available"
+
+      - name: Debug after script
+        run: |
+          if [ -f seen_guids.json ]; then
+            count=$(python3 -c 'import json; print(len(json.load(open("seen_guids.json"))))')
+            echo "Saved $count GUIDs to seen_guids.json"
+            python3 -c 'import json; g=json.load(open("seen_guids.json")); print("First 3:", g[:3] if len(g)>2 else g)'
+          else
+            echo "WARNING: seen_guids.json missing after script!"
+          fi
 
       - uses: actions/cache/save@v5
         with:
