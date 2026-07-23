@@ -14,26 +14,18 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Restore seen fire deals
-        uses: actions/download-artifact@v4
-        continue-on-error: true
+        uses: actions/cache@v4
         with:
-          name: fire-deals-seen
-          path: ./
-          search-current-run: false
+          path: fire_deals_seen.json
+          key: fire-deals-seen-${{ github.run_id }}
+          restore-keys: |
+            fire-deals-seen-
 
       - name: Check for fire deals
         run: python3 scripts/check_fire_deals.py
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
-
-      - name: Persist seen fire deals
-        uses: actions/upload-artifact@v4
-        with:
-          name: fire-deals-seen
-          path: fire_deals_seen.json
-          retention-days: 7
-          overwrite: true
 
       - name: Notify on consecutive failures
         if: failure()

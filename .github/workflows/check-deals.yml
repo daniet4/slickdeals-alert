@@ -14,12 +14,12 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Restore seen GUIDs
-        uses: actions/download-artifact@v4
-        continue-on-error: true
+        uses: actions/cache@v4
         with:
-          name: seen-guids
-          path: ./
-          search-current-run: false
+          path: seen_guids.json
+          key: seen-guids-${{ github.run_id }}
+          restore-keys: |
+            seen-guids-
 
       - name: Debug restore
         run: |
@@ -35,14 +35,6 @@ jobs:
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
-
-      - name: Persist seen GUIDs
-        uses: actions/upload-artifact@v4
-        with:
-          name: seen-guids
-          path: seen_guids.json
-          retention-days: 7
-          overwrite: true
 
       - name: Notify on consecutive failures
         if: failure()
