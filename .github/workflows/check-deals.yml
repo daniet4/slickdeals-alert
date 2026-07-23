@@ -12,7 +12,9 @@ jobs:
       - uses: actions/cache/restore@v5
         with:
           path: seen_guids.json
-          key: slickdeals-guids
+          key: slickdeals-guids-${{ github.run_id }}
+          restore-keys: |
+            slickdeals-guids-
 
       - name: Check for deals
         working-directory: scripts
@@ -24,7 +26,7 @@ jobs:
       - uses: actions/cache/save@v5
         with:
           path: seen_guids.json
-          key: slickdeals-guids
+          key: slickdeals-guids-${{ github.run_id }}
 
       - name: Notify on consecutive failures
         if: failure()
