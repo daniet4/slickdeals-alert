@@ -3,22 +3,26 @@ name: Check Slickdeals Deals (RSS)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/cache/restore@v5
-        id: cache
+      - name: Restore seen GUIDs
+        uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          path: seen_guids.json
-          key: slickdeals-guids
+          name: seen-guids
+          path: ./
+          search-current-run: false
 
-      - name: Cache debug
+      - name: Debug restore
         run: |
-          echo "Cache hit: ${{ steps.cache.outputs.cache-hit }}"
-          echo "Cache key: ${{ steps.cache.outputs.cache-primary-key }}"
           if [ -f seen_guids.json ]; then
             echo "Restored seen_guids.json with $(python3 -c 'import json; print(len(json.load(open(\"seen_guids.json\"))))') GUIDs"
           else
@@ -32,19 +36,13 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
 
-      - name: Debug after script
-        run: |
-          if [ -f seen_guids.json ]; then
-            count=$(python3 -c 'import json; print(len(json.load(open("seen_guids.json"))))')
-            echo "Saved $count GUIDs to seen_guids.json"
-          else
-            echo "WARNING: seen_guids.json missing after script!"
-          fi
-
-      - uses: actions/cache/save@v5
+      - name: Persist seen GUIDs
+        uses: actions/upload-artifact@v4
         with:
+          name: seen-guids
           path: seen_guids.json
-          key: slickdeals-guids
+          retention-days: 7
+          overwrite: true
 
       - name: Notify on consecutive failures
         if: failure()

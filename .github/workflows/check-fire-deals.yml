@@ -3,16 +3,23 @@ name: Check Fire Deals (HTML)
 on:
   workflow_dispatch:
 
+permissions:
+  contents: read
+  actions: write
+
 jobs:
   check:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/cache/restore@v5
+      - name: Restore seen fire deals
+        uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
-          path: fire_deals_seen.json
-          key: fire-deals-guids
+          name: fire-deals-seen
+          path: ./
+          search-current-run: false
 
       - name: Check for fire deals
         run: python3 scripts/check_fire_deals.py
@@ -20,10 +27,13 @@ jobs:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
           DISCORD_ROLE_ID: ${{ secrets.DISCORD_ROLE_ID }}
 
-      - uses: actions/cache/save@v5
+      - name: Persist seen fire deals
+        uses: actions/upload-artifact@v4
         with:
+          name: fire-deals-seen
           path: fire_deals_seen.json
-          key: fire-deals-guids
+          retention-days: 7
+          overwrite: true
 
       - name: Notify on consecutive failures
         if: failure()
